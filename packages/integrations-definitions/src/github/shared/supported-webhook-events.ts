@@ -46,6 +46,10 @@ const GitHubPayloadReferences = {
     path: ["issue", "number"],
     description: "Issue number",
   },
+  ISSUE_NODE_ID: {
+    path: ["issue", "node_id"],
+    description: "GitHub GraphQL node ID for the issue",
+  },
   ISSUE_TITLE: {
     path: ["issue", "title"],
     description: "Issue title",
@@ -86,6 +90,10 @@ const GitHubPayloadReferences = {
     path: ["comment", "body"],
     description: "Comment text",
   },
+  COMMENT_NODE_ID: {
+    path: ["comment", "node_id"],
+    description: "GitHub GraphQL node ID for the comment",
+  },
   REVIEW_BODY: {
     path: ["review", "body"],
     description: "Pull request review body",
@@ -104,6 +112,7 @@ const GitHubPayloadReferenceGroups = {
   ISSUE_CORE: [
     GitHubPayloadReferences.REPOSITORY_FULL_NAME,
     GitHubPayloadReferences.ISSUE_NUMBER,
+    GitHubPayloadReferences.ISSUE_NODE_ID,
     GitHubPayloadReferences.ISSUE_TITLE,
     GitHubPayloadReferences.ISSUE_BODY,
     GitHubPayloadReferences.SENDER_LOGIN,
@@ -111,9 +120,11 @@ const GitHubPayloadReferenceGroups = {
   ISSUE_COMMENT_CORE: [
     GitHubPayloadReferences.REPOSITORY_FULL_NAME,
     GitHubPayloadReferences.ISSUE_NUMBER,
+    GitHubPayloadReferences.ISSUE_NODE_ID,
     GitHubPayloadReferences.ISSUE_TITLE,
     GitHubPayloadReferences.ISSUE_PULL_REQUEST,
     GitHubPayloadReferences.COMMENT_BODY,
+    GitHubPayloadReferences.COMMENT_NODE_ID,
     GitHubPayloadReferences.SENDER_LOGIN,
   ],
   PULL_REQUEST_CORE: [

@@ -58,13 +58,133 @@ describe("webhook trigger template reference validation", () => {
             "Event: {{webhookEvent.eventType}}",
             "Payload: {{payload}}",
             "{% if payload.pull_request %}PR {{payload.pull_request.number}}{% endif %}",
-            'Comment: {{payload.comment.body | default: ""}}',
+            '{% if payload.comment %}Comment: {{payload.comment.body | default: ""}}{% endif %}',
           ].join("\n"),
         },
         {
           field: "conversationKeyTemplate",
           kind: WebhookTriggerTemplateKinds.KEY,
           template: "{{payload.repository.full_name}}",
+        },
+      ],
+    });
+
+    expect(result.issues).toEqual([]);
+  });
+
+  it("rejects unguarded user-message payload references that are not available on every selected event", () => {
+    const result = validateWebhookTriggerTemplates({
+      selectedEvents: [IssueCommentEvent, PullRequestEvent],
+      templates: [
+        {
+          field: "inputTemplate",
+          kind: WebhookTriggerTemplateKinds.INPUT,
+          template: "Review {{payload.pull_request.number}}",
+        },
+      ],
+    });
+
+    expect(result.issues).toEqual([
+      {
+        field: "inputTemplate",
+        message: "Unsupported trigger event field reference '{{payload.pull_request.number}}'.",
+      },
+    ]);
+  });
+
+  it("accepts event-type conditional user-message references for alternate selected event payload shapes", () => {
+    const result = validateWebhookTriggerTemplates({
+      selectedEvents: [IssueCommentEvent, PullRequestEvent],
+      templates: [
+        {
+          field: "inputTemplate",
+          kind: WebhookTriggerTemplateKinds.INPUT,
+          template: [
+            '{% if webhookEvent.eventType == "github.pull_request.opened" %}',
+            "Review PR {{payload.pull_request.number}}",
+            "{% elsif payload.issue %}",
+            "Review issue {{payload.issue.number}}",
+            "{% endif %}",
+          ].join(""),
+        },
+      ],
+    });
+
+    expect(result.issues).toEqual([]);
+  });
+
+  it("rejects user-message references under compound conditions that do not prove the payload shape", () => {
+    const result = validateWebhookTriggerTemplates({
+      selectedEvents: [IssueCommentEvent, PullRequestEvent],
+      templates: [
+        {
+          field: "inputTemplate",
+          kind: WebhookTriggerTemplateKinds.INPUT,
+          template:
+            "{% if payload.pull_request or payload.issue %}Review PR {{payload.pull_request.number}}{% endif %}",
+        },
+      ],
+    });
+
+    expect(result.issues).toEqual([
+      {
+        field: "inputTemplate",
+        message: "Unsupported trigger event field reference '{{payload.pull_request.number}}'.",
+      },
+    ]);
+  });
+
+  it("rejects user-message references under negated conditions that can reach events missing the payload shape", () => {
+    const result = validateWebhookTriggerTemplates({
+      selectedEvents: [IssueCommentEvent, PullRequestEvent],
+      templates: [
+        {
+          field: "inputTemplate",
+          kind: WebhookTriggerTemplateKinds.INPUT,
+          template:
+            "{% if not payload.pull_request %}Review PR {{payload.pull_request.number}}{% endif %}",
+        },
+      ],
+    });
+
+    expect(result.issues).toEqual([
+      {
+        field: "inputTemplate",
+        message: "Unsupported trigger event field reference '{{payload.pull_request.number}}'.",
+      },
+    ]);
+  });
+
+  it("rejects else-branch references after unmodeled conditions that can reach events missing the payload shape", () => {
+    const result = validateWebhookTriggerTemplates({
+      selectedEvents: [IssueCommentEvent, PullRequestEvent],
+      templates: [
+        {
+          field: "inputTemplate",
+          kind: WebhookTriggerTemplateKinds.INPUT,
+          template:
+            '{% if payload.pull_request.body contains "draft" %}No PR ref{% else %}Review PR {{payload.pull_request.number}}{% endif %}',
+        },
+      ],
+    });
+
+    expect(result.issues).toEqual([
+      {
+        field: "inputTemplate",
+        message: "Unsupported trigger event field reference '{{payload.pull_request.number}}'.",
+      },
+    ]);
+  });
+
+  it("accepts modeled elsif references after unmodeled conditions when the elsif proves the payload shape", () => {
+    const result = validateWebhookTriggerTemplates({
+      selectedEvents: [IssueCommentEvent, PullRequestEvent],
+      templates: [
+        {
+          field: "inputTemplate",
+          kind: WebhookTriggerTemplateKinds.INPUT,
+          template:
+            '{% if payload.pull_request.body contains "draft" %}No PR ref{% elsif payload.issue %}Issue {{payload.issue.number}}{% endif %}',
         },
       ],
     });
